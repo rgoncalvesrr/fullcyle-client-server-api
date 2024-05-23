@@ -20,16 +20,13 @@ func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	_json, err := json.Marshal(cota)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(_json)
+	if err = json.NewEncoder(w).Encode(cota); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
 }
 
 func BuscaCotacao() (*entity.Cotacao, error) {

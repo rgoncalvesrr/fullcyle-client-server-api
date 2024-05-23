@@ -4,12 +4,17 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/rgoncalvesrr/fullcyle-client-server-api/internal/core/entity"
 )
 
 type DataBody struct {
 	Data entity.Cotacao `json:"USDBRL"`
+}
+
+type CotacaoOutputDTO struct {
+	Bid string `json:"bid"`
 }
 
 func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
@@ -23,11 +28,13 @@ func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(cota)
+
+	json.NewEncoder(w).Encode(CotacaoOutputDTO{Bid: cota.Bid})
 }
 
 func BuscaCotacao() (*entity.Cotacao, error) {
-	req, err := http.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
+	c := http.Client{Timeout: time.Millisecond * 200}
+	req, err := c.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +54,6 @@ func BuscaCotacao() (*entity.Cotacao, error) {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", BuscaCotacaoHandler)
-	http.ListenAndServe(":3000", mux)
+	mux.HandleFunc("/cotacao", BuscaCotacaoHandler)
+	http.ListenAndServe(":8080", mux)
 }

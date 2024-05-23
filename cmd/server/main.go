@@ -23,10 +23,7 @@ func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err = json.NewEncoder(w).Encode(cota); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
+	json.NewEncoder(w).Encode(cota)
 }
 
 func BuscaCotacao() (*entity.Cotacao, error) {

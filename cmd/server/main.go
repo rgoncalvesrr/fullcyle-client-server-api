@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -14,28 +13,42 @@ type DataBody struct {
 }
 
 func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
+
+	cota, err := BuscaCotacao()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	_json, err := json.Marshal(cota)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(_json)
+}
+
+func BuscaCotacao() (*entity.Cotacao, error) {
 	req, err := http.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
 	if err != nil {
-		fmt.Fprintf(w, "Erro ao fazer a requisição %v", err)
+		return nil, err
 	}
 	defer req.Body.Close()
-	_body, err := io.ReadAll(req.Body)
+	r, err := io.ReadAll(req.Body)
 	if err != nil {
-		fmt.Fprintf(w, "Erro ao ler stream %v", err)
+		return nil, err
 	}
-	var _dataBody DataBody
+	var body DataBody
 
-	if err = json.Unmarshal(_body, &_dataBody); err != nil {
-		fmt.Fprintf(w, "Erro ao fazer decodificar json %v", err)
-	}
-
-	_json, err := json.Marshal(_dataBody.Data)
-	if err != nil {
-		fmt.Fprintf(w, "Erro codificar json %v", err)
+	if err = json.Unmarshal(r, &body); err != nil {
+		return nil, err
 	}
 
-	w.Write(_json)
-
+	return &body.Data, nil
 }
 
 func main() {

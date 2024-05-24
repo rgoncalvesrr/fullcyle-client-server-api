@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -19,7 +23,11 @@ type CotacaoOutputDTO struct {
 
 func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 
-	cota, err := BuscaCotacao()
+	defer fmt.Println("Requisição finalizada")
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	cota, err := BuscaCotacao(ctx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -30,26 +38,39 @@ func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(w).Encode(CotacaoOutputDTO{Bid: cota.Bid})
+
 }
 
-func BuscaCotacao() (*entity.Cotacao, error) {
-	c := http.Client{Timeout: time.Millisecond * 200}
-	req, err := c.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
-	if err != nil {
-		return nil, err
-	}
-	defer req.Body.Close()
-	r, err := io.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	var body DataBody
+func BuscaCotacao(ctx context.Context) (*entity.Cotacao, error) {
+	select {
+	case <-ctx.Done():
+		log.Println("Tempo limite atingido")
+		return nil, errors.New("Requisição cancelada")
+	default:
+		req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
+		if err != nil {
+			return nil, err
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Println("Erro ao fazer a requisição", err)
+			return nil, err
+		}
+		defer res.Body.Close()
 
-	if err = json.Unmarshal(r, &body); err != nil {
-		return nil, err
-	}
+		r, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
 
-	return &body.Data, nil
+		var body DataBody
+
+		if err = json.Unmarshal(r, &body); err != nil {
+			return nil, err
+		}
+
+		return &body.Data, nil
+	}
 }
 
 func main() {

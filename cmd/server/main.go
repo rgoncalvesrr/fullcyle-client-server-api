@@ -31,13 +31,12 @@ func BuscaCotacaoHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	json.NewEncoder(w).Encode(CotacaoOutputDTO{Bid: cota.Bid})
+	_ = json.NewEncoder(w).Encode(CotacaoOutputDTO{Bid: cota.Bid})
 
 }
 
@@ -45,7 +44,7 @@ func BuscaCotacao(ctx context.Context) (*entity.Cotacao, error) {
 	select {
 	case <-ctx.Done():
 		log.Println("Tempo limite atingido")
-		return nil, errors.New("Requisição cancelada")
+		return nil, errors.New("requisição cancelada")
 	default:
 		req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
 		if err != nil {
